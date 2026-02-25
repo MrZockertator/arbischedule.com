@@ -1,15 +1,3 @@
-/**
- * app.js — Main application controller.
- *
- * Manages state, renders the node sidebar and arbitration table,
- * handles timezone selection, and schedules periodic data refreshes.
- *
- * Security:
- *   - All dynamic text is escaped via escapeHtml() before innerHTML insertion.
- *   - No eval(), no inline event handlers in template strings.
- *   - Event listeners are attached programmatically after render.
- */
-
 import { getAllData } from "./data.js";
 import {
   TZ_GROUPS,
@@ -29,11 +17,11 @@ let lastUpdatedAt = null;
 let nextRefreshAt = null;
 let tzFocusIndex  = -1;
 
-const REFRESH_MS = 60 * 60 * 1000; // 1 hour
+const REFRESH_MS = 60 * 60 * 1000;
 let countdownTimer = null;
 let refreshTimer   = null;
 
-/* ── Helpers ── */
+/* Helpers */
 function escapeHtml(str) {
   const el = document.createElement("span");
   el.textContent = str;
@@ -64,7 +52,7 @@ function factionClass(f) {
   return "default";
 }
 
-/* ── Persistence ── */
+/* Persistence */
 function loadSelected() {
   try {
     const raw = localStorage.getItem("wf_selected");
@@ -79,7 +67,7 @@ function saveSelected() {
   updateNodeCount();
 }
 
-/* ── Data loading ── */
+/* Data loading */
 async function loadData() {
   try {
     const data = await getAllData();
@@ -119,7 +107,7 @@ function setStatus(type, label) {
   pill.className = "status-pill " + type;
 }
 
-/* ── Node sidebar ── */
+/* Node sidebar */
 function renderNodeList() {
   const list = document.getElementById("nodeList");
 
@@ -135,7 +123,6 @@ function renderNodeList() {
     return;
   }
 
-  // Selected nodes first
   const sorted = [...filtered].sort((a, b) => {
     const as = selected.has(a.id) ? 0 : 1;
     const bs = selected.has(b.id) ? 0 : 1;
@@ -158,7 +145,6 @@ function renderNodeList() {
     </div>`;
   }).join("");
 
-  // Attach click listeners (no inline onclick)
   list.querySelectorAll(".node-item").forEach(el => {
     el.addEventListener("click", () => toggleNode(el.dataset.nodeId));
   });
@@ -168,7 +154,7 @@ function toggleNode(id) {
   if (selected.has(id)) selected.delete(id);
   else selected.add(id);
   saveSelected();
-  // Toggle class without full re-render
+
   const el = document.querySelector(`[data-node-id="${CSS.escape(id)}"]`);
   if (el) el.classList.toggle("active", selected.has(id));
   renderTable();
@@ -197,7 +183,7 @@ function updateNodeCount() {
     active > 0 ? `${active} / ${total}` : `${total} nodes`;
 }
 
-/* ── Table ── */
+/* Table */
 function renderTable() {
   const wrap   = document.getElementById("tableWrap");
   const cutoff = Date.now() + daysToShow * 24 * 60 * 60 * 1000;
@@ -228,7 +214,7 @@ function renderTable() {
     </tr></thead><tbody>`;
 
   let lastDay = "";
-  // Group arbs by day for the copy-day feature
+  // Group arbis by day
   const dayMap = new Map();
 
   filtered.forEach(a => {
@@ -276,7 +262,6 @@ function renderTable() {
   void wrap.offsetWidth;
   wrap.classList.add("fade-in");
 
-  // Attach copy-day listeners
   wrap.querySelectorAll(".copy-day-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       const dayArbs = dayMap.get(btn.dataset.day);
@@ -284,7 +269,6 @@ function renderTable() {
     });
   });
 
-  // Attach copy-row listeners
   wrap.querySelectorAll(".copy-row-btn").forEach(btn => {
     btn.addEventListener("click", e => {
       e.stopPropagation();
@@ -301,7 +285,7 @@ function renderTable() {
   tickCountdowns();
 }
 
-/* ── Countdown ticker ── */
+/* Countdown ticker */
 function tickCountdowns() {
   const now = Date.now();
   document.querySelectorAll(".countdown[data-epoch]").forEach(el => {
@@ -338,7 +322,7 @@ function tickRefreshInfo() {
     `${nextMin}m ${String(nextSec).padStart(2, "0")}s`;
 }
 
-/* ── Timezone picker ── */
+/* Timezone picker */
 function updateTzLabel() {
   const offset = getOffset(userTz);
   document.getElementById("tzLabel").textContent =
@@ -430,7 +414,7 @@ function handleTzKeyNav(e) {
   if (items[tzFocusIndex]) items[tzFocusIndex].scrollIntoView({ block: "nearest" });
 }
 
-/* ── Boot ── */
+/* Boot */
 document.addEventListener("DOMContentLoaded", () => {
   loadSelected();
   updateTzLabel();

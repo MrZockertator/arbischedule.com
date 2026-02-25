@@ -1,7 +1,3 @@
-/**
- * timezone.js — Timezone selection, formatting, and persistence.
- */
-
 const TZ_GROUPS = Object.freeze({
   "America": [
     "America/Anchorage","America/Los_Angeles","America/Denver",

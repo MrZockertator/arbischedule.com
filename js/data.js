@@ -1,16 +1,3 @@
-/**
- * data.js — Fetches and processes arbitration schedule data.
- *
- * Data sources (both public, no auth needed):
- *   - browse.wf/arbys.txt          → epoch,SolNodeXX per line
- *   - WFCD solNodes.json on GitHub  → node metadata (name, faction, mission type)
- *
- * Security notes:
- *   - All fetched text is escaped before DOM insertion (see ui.js escapeHtml).
- *   - No user input reaches these URLs — they are hard-coded constants.
- *   - solNodes are cached in sessionStorage (per-tab, cleared on close).
- */
-
 const DATA_SOURCES = Object.freeze({
   ARBYS:    "https://browse.wf/arbys.txt",
   SOLNODES: "https://raw.githubusercontent.com/WFCD/warframe-worldstate-data/master/data/solNodes.json",
@@ -43,7 +30,7 @@ function decodeMission(raw) {
   return MISSION_TYPES[raw] || raw || "Unknown";
 }
 
-/* ── Fetch solNodes.json (cached in sessionStorage for the tab) ── */
+/* Fetch solNodes.json (cached in sessionStorage for the tab) */
 async function getSolNodes() {
   const CACHE_KEY = "wf_solNodes_v2";
   const CACHE_TS  = "wf_solNodes_ts";
@@ -70,7 +57,7 @@ async function getSolNodes() {
   return data;
 }
 
-/* ── Fetch + parse arbys.txt ── */
+/* Fetch + parse arbys.txt */
 async function fetchArbysRaw() {
   const resp = await fetch(DATA_SOURCES.ARBYS);
   if (!resp.ok) throw new Error("Failed to fetch arbys.txt — HTTP " + resp.status);
@@ -92,7 +79,7 @@ async function fetchArbysRaw() {
   return entries;
 }
 
-/* ── Combine into enriched arbitration objects ── */
+/* Combine into enriched arbitration objects */
 async function fetchArbitrations() {
   const [raw, solNodes] = await Promise.all([fetchArbysRaw(), getSolNodes()]);
 
@@ -111,7 +98,7 @@ async function fetchArbitrations() {
   });
 }
 
-/* ── Build the payload the UI expects ── */
+/* Build the payload the UI expects */
 async function getAllData() {
   const arbs = await fetchArbitrations();
   const now  = Date.now();
