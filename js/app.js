@@ -400,18 +400,39 @@ function initThemeController() {
 }
 
 function boot() {
-  initThemeController();
+  try {
+    initThemeController();
 
-  renderPresetOptions();
-  updateSearchState(/** @type {HTMLInputElement} */ (getRequiredElement("nodeSearch")).value);
-  bindUiEvents();
-  initTimezonePicker();
+    renderPresetOptions();
+    updateSearchState(/** @type {HTMLInputElement} */ (getRequiredElement("nodeSearch")).value);
+    bindUiEvents();
+    initTimezonePicker();
 
-  setStatus("", "⟳ LOADING");
+    setStatus("", "⟳ LOADING");
 
-  loadData().catch(error => {
-    logger.error(error, { phase: "boot.loadData" });
-  });
+    loadData().catch(error => {
+      logger.error(error, { phase: "boot.loadData" });
+    });
+  } catch (error) {
+    logger.error(error, { phase: "boot" });
+
+    const statusPill = document.getElementById("statusPill");
+    if (statusPill) {
+      statusPill.textContent = "✗ ERROR";
+      statusPill.className = "status-pill err";
+    }
+
+    const wrap = document.getElementById("tableWrap");
+    if (wrap) {
+      clearNode(wrap);
+      wrap.appendChild(
+        el("div", { className: "state-box" }, [
+          el("span", { className: "icon", textContent: "⚠" }),
+          error instanceof Error ? error.message : "Failed to initialize app.",
+        ])
+      );
+    }
+  }
 }
 
 document.addEventListener("DOMContentLoaded", boot);
