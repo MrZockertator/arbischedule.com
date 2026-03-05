@@ -1,5 +1,19 @@
-import { getOffset, getLocalTimezone, isValidTimezone } from "../timezone.js";
+import { getOffset, getLocalTimezone } from "../timezone.js";
 import { el, clearNode } from "../shared/dom.js";
+
+/**
+ * @param {string} timezone
+ */
+function isValidTimezone(timezone) {
+  if (!timezone || typeof timezone !== "string") return false;
+
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: timezone }).format(new Date());
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * @typedef {{

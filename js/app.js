@@ -5,7 +5,8 @@ import { el, clearNode, debounce } from "./shared/dom.js";
 import { buildSearchState, getSearchFeedback } from "./features/search.js";
 import { renderNodeList, updateNodeCountLabel } from "./features/nodes.js";
 import { renderArbitrationTable, tickCountdowns } from "./features/table.js";
-import { createTimezonePicker } from "./features/timezone-picker.js";
+// @ts-ignore cache-busting module URL for safer deploy rollouts
+import { createTimezonePicker } from "./features/timezone-picker.js?v=20260305-8";
 import { createThemeController } from "./features/theme.js";
 import {
   loadSelectedNodeIds,
