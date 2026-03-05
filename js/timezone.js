@@ -13,7 +13,7 @@ const TZ_GROUPS = Object.freeze({
     "Europe/Warsaw","Europe/Prague","Europe/Budapest",
     "Europe/Stockholm","Europe/Oslo","Europe/Helsinki",
     "Europe/Athens","Europe/Bucharest","Europe/Istanbul",
-    "Europe/Moscow","Europe/Kiev",
+    "Europe/Moscow","Europe/Kyiv",
   ],
   "Africa": [
     "Africa/Cairo","Africa/Lagos","Africa/Nairobi",
@@ -34,26 +34,18 @@ const TZ_GROUPS = Object.freeze({
   "UTC": ["UTC"],
 });
 
-const STORAGE_KEY = "wf_tz";
-
 function getLocalTimezone() {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
-function loadTimezone() {
+function isValidTimezone(tz) {
+  if (!tz || typeof tz !== "string") return false;
   try {
-    return localStorage.getItem(STORAGE_KEY) || getLocalTimezone();
+    new Intl.DateTimeFormat("en", { timeZone: tz }).format(new Date());
+    return true;
   } catch {
-    return getLocalTimezone();
+    return false;
   }
-}
-
-function saveTimezone(tz) {
-  try { localStorage.setItem(STORAGE_KEY, tz); } catch { /* noop */ }
-}
-
-function clearTimezone() {
-  try { localStorage.removeItem(STORAGE_KEY); } catch { /* noop */ }
 }
 
 function getOffset(tz) {
@@ -70,22 +62,42 @@ function getOffset(tz) {
 
 function formatEpoch(epochMs, fmt, tz) {
   const d = new Date(epochMs);
-  switch (fmt) {
-    case "date":
-      return d.toLocaleDateString("en-CA", { timeZone: tz });
-    case "time":
-      return d.toLocaleTimeString("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit" });
-    case "day":
-      return d.toLocaleDateString(undefined, { timeZone: tz, weekday: "long", month: "long", day: "numeric" });
-    case "short-date":
-      return d.toLocaleDateString("de-DE", { timeZone: tz, day: "2-digit", month: "2-digit", year: "2-digit" });
-    default:
-      return "";
+  const safeTz = isValidTimezone(tz) ? tz : getLocalTimezone();
+
+  try {
+    switch (fmt) {
+      case "date":
+        return d.toLocaleDateString("en-CA", { timeZone: safeTz });
+      case "time":
+        return d.toLocaleTimeString("en-GB", {
+          timeZone: safeTz,
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      case "day":
+        return d.toLocaleDateString(undefined, {
+          timeZone: safeTz,
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+        });
+      case "short-date":
+        return d.toLocaleDateString("de-DE", {
+          timeZone: safeTz,
+          day: "2-digit",
+          month: "2-digit",
+          year: "2-digit",
+        });
+      default:
+        return "";
+    }
+  } catch {
+    return "";
   }
 }
 
 export {
-  TZ_GROUPS, STORAGE_KEY,
-  getLocalTimezone, loadTimezone, saveTimezone, clearTimezone,
-  getOffset, formatEpoch,
+  TZ_GROUPS,
+  getLocalTimezone,
+  getOffset, formatEpoch, isValidTimezone,
 };

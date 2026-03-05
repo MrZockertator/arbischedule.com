@@ -1,128 +1,313 @@
+import { readSessionJson, writeSessionJson } from "./services/storage.js";
+
 const DATA_SOURCES = Object.freeze({
-  ARBYS:    "https://browse.wf/arbys.txt",
+  ARBYS: "https://browse.wf/arbys.txt",
   SOLNODES: "https://raw.githubusercontent.com/WFCD/warframe-worldstate-data/master/data/solNodes.json",
 });
 
+const SOLNODES_CACHE_KEY = "wf_solNodes_cache";
+const SOLNODES_CACHE_VERSION = 1;
+const SOLNODES_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+
+const REQUEST_TIMEOUT_MS = 10_000;
+const REQUEST_RETRIES = 2;
+const RETRY_BASE_DELAY_MS = 300;
+
+const NODE_ID_PATTERN = /^[A-Za-z0-9_./:-]{2,120}$/;
+
 const MISSION_TYPES = Object.freeze({
-  MT_ARTIFACT:       "Disruption",
-  MT_CAPTURE:        "Capture",
-  MT_DEFENSE:        "Defense",
-  MT_EXCAVATE:       "Excavation",
-  MT_EXTERMINATION:  "Extermination",
-  MT_HIVE:           "Hive",
-  MT_INTEL:          "Spy",
-  MT_INTERCEPTION:   "Interception",
-  MT_LANDSCAPE:      "Open World",
+  MT_ARTIFACT: "Disruption",
+  MT_CAPTURE: "Capture",
+  MT_DEFENSE: "Defense",
+  MT_EXCAVATE: "Excavation",
+  MT_EXTERMINATION: "Extermination",
+  MT_HIVE: "Hive",
+  MT_INTEL: "Spy",
+  MT_INTERCEPTION: "Interception",
+  MT_LANDSCAPE: "Open World",
   MT_MOBILE_DEFENSE: "Mobile Defense",
-  MT_NEST:           "Defection",
-  MT_PURSUIT:        "Pursuit",
-  MT_RESCUE:         "Rescue",
-  MT_RETRIEVAL:      "Hijack",
-  MT_SABOTAGE:       "Sabotage",
-  MT_SECTOR:         "Dark Sector",
-  MT_SURVIVAL:       "Survival",
-  MT_TERRITORY:      "Infested Salvage",
-  MT_VOID_CASCADE:   "Void Cascade",
-  MT_VOID_FLOOD:     "Void Flood",
+  MT_NEST: "Defection",
+  MT_PURSUIT: "Pursuit",
+  MT_RESCUE: "Rescue",
+  MT_RETRIEVAL: "Hijack",
+  MT_SABOTAGE: "Sabotage",
+  MT_SECTOR: "Dark Sector",
+  MT_SURVIVAL: "Survival",
+  MT_TERRITORY: "Infested Salvage",
+  MT_VOID_CASCADE: "Void Cascade",
+  MT_VOID_FLOOD: "Void Flood",
 });
 
+/**
+ * @param {number} ms
+ */
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * @param {unknown} value
+ * @param {number} [maxLen]
+ * @param {string} [fallback]
+ */
+function safeText(value, maxLen = 128, fallback = "Unknown") {
+  if (typeof value !== "string") return fallback;
+  const cleaned = value.trim().slice(0, maxLen);
+  return cleaned || fallback;
+}
+
+/**
+ * @param {unknown} value
+ */
+function isValidNodeId(value) {
+  return typeof value === "string" && NODE_ID_PATTERN.test(value.trim());
+}
+
+/**
+ * @param {string} raw
+ */
+function safeMission(raw) {
+  const mission = safeText(raw, 48, "Unknown");
+  return MISSION_TYPES[mission] || mission;
+}
+
+/**
+ * @param {unknown} raw
+ */
 function decodeMission(raw) {
-  return MISSION_TYPES[raw] || raw || "Unknown";
+  return safeMission(typeof raw === "string" ? raw : "Unknown");
 }
 
-/* Fetch solNodes.json (cached in sessionStorage for the tab) */
-async function getSolNodes() {
-  const CACHE_KEY = "wf_solNodes_v2";
-  const CACHE_TS  = "wf_solNodes_ts";
-  const MAX_AGE   = 6 * 60 * 60 * 1000; // 6 hours
+/**
+ * @param {string} url
+ * @param {{timeoutMs?: number, retries?: number, fetchFn?: typeof fetch}} [options]
+ */
+async function fetchWithRetry(url, options = {}) {
+  const timeoutMs = options.timeoutMs ?? REQUEST_TIMEOUT_MS;
+  const retries = options.retries ?? REQUEST_RETRIES;
+  const fetchFn = options.fetchFn || fetch;
 
-  try {
-    const cached = sessionStorage.getItem(CACHE_KEY);
-    const ts     = Number(sessionStorage.getItem(CACHE_TS) || 0);
-    if (cached && Date.now() - ts < MAX_AGE) {
-      return JSON.parse(cached);
+  /** @type {unknown} */
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetchFn(url, {
+        signal: controller.signal,
+        cache: "no-store",
+      });
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      return response;
+    } catch (error) {
+      clearTimeout(timeout);
+      lastError = error;
+
+      if (attempt >= retries) break;
+      await sleep(RETRY_BASE_DELAY_MS * (attempt + 1));
     }
-  } catch { /* sessionStorage unavailable — continue without cache */ }
+  }
 
-  const resp = await fetch(DATA_SOURCES.SOLNODES);
-  if (!resp.ok) throw new Error("Failed to fetch solNodes.json — HTTP " + resp.status);
-
-  const data = await resp.json();
-
-  try {
-    sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
-    sessionStorage.setItem(CACHE_TS, String(Date.now()));
-  } catch { /* quota exceeded or unavailable — silently skip */ }
-
-  return data;
+  throw new Error(`Request failed for ${url}: ${String(lastError || "unknown error")}`);
 }
 
-/* Fetch + parse arbys.txt */
-async function fetchArbysRaw() {
-  const resp = await fetch(DATA_SOURCES.ARBYS);
-  if (!resp.ok) throw new Error("Failed to fetch arbys.txt — HTTP " + resp.status);
+/**
+ * @param {unknown} payload
+ * @returns {Record<string, {value: string, type: string, enemy: string}>}
+ */
+function validateSolNodesPayload(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    throw new Error("Invalid solNodes payload");
+  }
 
-  const text = await resp.text();
+  /** @type {Record<string, {value: string, type: string, enemy: string}>} */
+  const safe = {};
+
+  for (const [nodeId, nodeInfo] of Object.entries(payload)) {
+    if (!isValidNodeId(nodeId)) continue;
+    if (!nodeInfo || typeof nodeInfo !== "object") continue;
+
+    const info = /** @type {{value?: unknown, type?: unknown, enemy?: unknown}} */ (nodeInfo);
+    safe[nodeId] = {
+      value: safeText(info.value, 120, nodeId),
+      type: safeText(info.type, 48, "Unknown"),
+      enemy: safeText(info.enemy, 32, "Unknown"),
+    };
+  }
+
+  if (!Object.keys(safe).length) {
+    throw new Error("solNodes payload has no valid entries");
+  }
+
+  return safe;
+}
+
+/**
+ * @param {string} text
+ * @returns {Array<{epoch: number, nodeId: string}>}
+ */
+function parseArbysText(text) {
+  const lines = String(text || "").split("\n");
+  /** @type {Array<{epoch: number, nodeId: string}>} */
   const entries = [];
 
-  for (const raw of text.split("\n")) {
-    const line = raw.trim();
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
     if (!line) continue;
-    const parts = line.split(",");
-    if (parts.length < 2) continue;
-    const epoch  = Number(parts[0]);
-    const nodeId = parts[1].trim();
-    if (Number.isNaN(epoch) || !nodeId) continue;
+
+    const [rawEpoch, rawNodeId] = line.split(",");
+    if (!rawEpoch || !rawNodeId) continue;
+
+    const epoch = Number(rawEpoch);
+    const nodeId = rawNodeId.trim();
+
+    if (!Number.isFinite(epoch) || epoch <= 0) continue;
+    if (!isValidNodeId(nodeId)) continue;
+
     entries.push({ epoch, nodeId });
   }
 
   return entries;
 }
 
-/* Combine into enriched arbitration objects */
-async function fetchArbitrations() {
-  const [raw, solNodes] = await Promise.all([fetchArbysRaw(), getSolNodes()]);
+/**
+ * @returns {Promise<Record<string, {value: string, type: string, enemy: string}>>}
+ */
+async function getSolNodes() {
+  const cached = readSessionJson(SOLNODES_CACHE_KEY);
+  let staleData = null;
 
+  if (cached && typeof cached === "object") {
+    const payload = /** @type {{v?: unknown, updatedAt?: unknown, data?: unknown}} */ (cached);
+    const isCurrentVersion = Number(payload.v) === SOLNODES_CACHE_VERSION;
+    const updatedAt = Number(payload.updatedAt);
+
+    if (isCurrentVersion && payload.data && Number.isFinite(updatedAt)) {
+      try {
+        const validated = validateSolNodesPayload(payload.data);
+        const age = Date.now() - updatedAt;
+        if (age < SOLNODES_MAX_AGE_MS) {
+          return validated;
+        }
+        staleData = validated;
+      } catch {
+        staleData = null;
+      }
+    }
+  }
+
+  try {
+    const response = await fetchWithRetry(DATA_SOURCES.SOLNODES);
+    const json = await response.json();
+    const validated = validateSolNodesPayload(json);
+
+    writeSessionJson(SOLNODES_CACHE_KEY, {
+      v: SOLNODES_CACHE_VERSION,
+      updatedAt: Date.now(),
+      data: validated,
+    });
+
+    return validated;
+  } catch (error) {
+    if (staleData) return staleData;
+    throw new Error(`Failed to fetch solNodes: ${String(error)}`);
+  }
+}
+
+/**
+ * @returns {Promise<Array<{epoch: number, nodeId: string}>>}
+ */
+async function fetchArbysRaw() {
+  const response = await fetchWithRetry(DATA_SOURCES.ARBYS);
+  const text = await response.text();
+  const entries = parseArbysText(text);
+
+  if (!entries.length) {
+    throw new Error("No valid arbitration entries found");
+  }
+
+  return entries;
+}
+
+/**
+ * @param {Array<{epoch: number, nodeId: string}>} raw
+ * @param {Record<string, {value: string, type: string, enemy: string}>} solNodes
+ */
+function buildArbitrations(raw, solNodes) {
   return raw.map(entry => {
-    const info  = solNodes[entry.nodeId] || {};
-    const match = (info.value || "").match(/^(.+?)\s*\((.+?)\)$/);
+    const info = solNodes[entry.nodeId] || {
+      value: entry.nodeId,
+      type: "Unknown",
+      enemy: "Unknown",
+    };
+
+    const match = info.value.match(/^(.+?)\s*\((.+?)\)$/);
 
     return {
       epochMs: entry.epoch * 1000,
-      nodeId:  entry.nodeId,
-      node:    match ? match[1] : (info.value || entry.nodeId),
-      planet:  match ? match[2] : "Unknown",
-      mission: decodeMission(info.type || "Unknown"),
-      faction: info.enemy || "Unknown",
+      nodeId: entry.nodeId,
+      node: match ? safeText(match[1], 80, entry.nodeId) : safeText(info.value, 80, entry.nodeId),
+      planet: match ? safeText(match[2], 40, "Unknown") : "Unknown",
+      mission: decodeMission(info.type),
+      faction: safeText(info.enemy, 32, "Unknown"),
     };
   });
 }
 
-/* Build the payload the UI expects */
+/**
+ * @returns {Promise<Array<{epochMs: number, nodeId: string, node: string, planet: string, mission: string, faction: string}>>}
+ */
+async function fetchArbitrations() {
+  const [raw, solNodes] = await Promise.all([fetchArbysRaw(), getSolNodes()]);
+  return buildArbitrations(raw, solNodes);
+}
+
+/**
+ * @returns {Promise<{
+ *   nodes: Array<{id: string, node: string, mission: string, faction: string}>,
+ *   arbs: Array<{epochMs: number, nodeId: string, node: string, planet: string, mission: string, faction: string}>
+ * }>}
+ */
 async function getAllData() {
   const arbs = await fetchArbitrations();
-  const now  = Date.now();
+  const now = Date.now();
   const yearMs = 365 * 24 * 60 * 60 * 1000;
 
-  // Deduplicate nodes
-  const seen = {};
-  for (const a of arbs) {
-    if (!seen[a.nodeId]) {
-      seen[a.nodeId] = {
-        id: a.nodeId,
-        node: a.node,
-        mission: a.mission,
-        faction: a.faction,
-      };
+  /** @type {Map<string, {id: string, node: string, mission: string, faction: string}>} */
+  const seen = new Map();
+
+  for (const arb of arbs) {
+    if (!seen.has(arb.nodeId)) {
+      seen.set(arb.nodeId, {
+        id: arb.nodeId,
+        node: arb.node,
+        mission: arb.mission,
+        faction: arb.faction,
+      });
     }
   }
 
   return {
-    nodes: Object.values(seen).sort((a, b) => a.node.localeCompare(b.node)),
+    nodes: [...seen.values()].sort((a, b) => a.node.localeCompare(b.node)),
     arbs: arbs
-      .filter(a => a.epochMs >= now - 3_600_000 && a.epochMs <= now + yearMs)
+      .filter(arb => arb.epochMs >= now - 3_600_000 && arb.epochMs <= now + yearMs)
       .sort((a, b) => a.epochMs - b.epochMs),
   };
 }
 
-export { getAllData, decodeMission, DATA_SOURCES };
+export {
+  getAllData,
+  decodeMission,
+  parseArbysText,
+  validateSolNodesPayload,
+  buildArbitrations,
+  fetchWithRetry,
+  DATA_SOURCES,
+};
