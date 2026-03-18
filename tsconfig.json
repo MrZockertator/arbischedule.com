@@ -3,13 +3,19 @@
     "target": "ES2022",
     "module": "ES2022",
     "moduleResolution": "Bundler",
-    "allowJs": true,
-    "checkJs": true,
+    "allowJs": false,
+    "checkJs": false,
     "noEmit": true,
-    "strict": false,
+    "strict": true,
     "skipLibCheck": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["vitest/globals"]
   },
-  "include": ["js/**/*.js", "tests/**/*.js", "types/**/*.d.ts", "eslint.config.js"]
+  "include": [
+    "src/**/*.ts",
+    "tests/**/*.ts",
+    "types/**/*.d.ts",
+    "eslint.config.js",
+    "vite.config.ts"
+  ]
 }

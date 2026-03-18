@@ -1,0 +1,5 @@
+@layer base, components, modal;
+
+@import "./base.css" layer(base);
+@import "./table.css" layer(components);
+@import "./modal.css" layer(modal);

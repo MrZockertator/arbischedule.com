@@ -1,0 +1,264 @@
+/* ── Table ── */
+
+.arb-grid {
+  display: flex;
+  flex-direction: column;
+  font-size: .92rem;
+}
+
+.arb-grid-row {
+  display: grid;
+  grid-template-columns: 132px minmax(130px, 1fr) minmax(190px, 1.25fr) 140px 170px var(--table-actions-width);
+  align-items: center;
+}
+
+.arb-cell {
+  min-height: 48px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+}
+
+.arb-cell.head {
+  text-align: left;
+  font-size: .75rem;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.arb-cell.box.head {
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.arb-cell.box.head.box-start { border-left: 1px solid var(--border); }
+.arb-cell.box.head.box-end { border-right: 1px solid var(--border); }
+
+.arb-row:hover .arb-cell.box { background: var(--surface2); }
+
+.arb-grid-row.arb-row,
+.arb-grid-row.arb-day-row {
+  position: relative;
+}
+
+.arb-grid-row.arb-row::after,
+.arb-grid-row.arb-day-row::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: var(--table-actions-width);
+  bottom: 0;
+  border-bottom: 1px solid var(--border);
+  pointer-events: none;
+}
+
+.arb-cell.rail {
+  width: var(--table-actions-width);
+  padding: 8px 0 8px 2px;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  overflow: visible;
+}
+
+.actions-head {
+  min-height: 0;
+  padding-left: 8px;
+  padding-top: 0;
+  padding-bottom: 0;
+  justify-content: flex-start;
+}
+
+.actions-head #btnCopySelected {
+  margin-left: var(--copy-selected-shift);
+}
+
+.td-time {
+  font-family: var(--font);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+}
+
+.td-time .date     { display: block; font-size: .95rem; font-weight: 600; color: var(--text); line-height: 1.1; }
+.td-time .time-val { display: block; color: var(--accent); font-size: var(--fs-time-val); font-weight: 700; line-height: 1.1; }
+.td-node           { font-weight: 700; font-size: 1rem; color: var(--text-strong); }
+
+/* Faction badges */
+
+.badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 2px;
+  font-size: .78rem;
+  font-weight: 600;
+  letter-spacing: .05em;
+  border: 1px solid;
+}
+
+.badge-Grineer   { color: var(--grineer);   border-color: var(--grineer);   background: rgba(224, 90, 43, .1); }
+.badge-Corpus     { color: var(--corpus);    border-color: var(--corpus);    background: rgba(75, 163, 224, .1); }
+.badge-Infested   { color: var(--infested);  border-color: var(--infested);  background: rgba(106, 191, 71, .1); }
+.badge-Corrupted  { color: var(--corrupted); border-color: var(--corrupted); background: rgba(176, 106, 224, .1); }
+.badge-Orokin     { color: var(--orokin);    border-color: var(--orokin);    background: rgba(200, 168, 75, .1); }
+.badge-Murmur     { color: var(--murmur);    border-color: var(--murmur);    background: rgba(232, 232, 232, .08); }
+.badge-default    { color: var(--muted);     border-color: var(--border);    background: transparent; }
+
+/* Countdown */
+
+.countdown-cell {
+  white-space: nowrap;
+  width: 170px;
+}
+
+.countdown-actions {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.countdown {
+  display: inline-block;
+  min-width: 9ch;
+  font-family: var(--font);
+  font-weight: 700;
+  color: var(--accent2);
+}
+
+/* Day divider */
+
+.day-box {
+  grid-column: 1 / 6;
+  display: block;
+  padding: 0 14px;
+  min-height: 0;
+}
+
+.day-box-span {
+  grid-column: 1 / 6;
+}
+
+.day-divider .day-copy-cell {
+  min-height: 0;
+  padding: 8px 0 8px 2px;
+}
+
+.day-divider-inner {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: var(--accent2);
+}
+
+.day-divider-inner .copy-day-btn {
+  margin-left: auto;
+}
+
+/* Copy buttons */
+
+.copy-day-btn,
+.copy-row-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--muted);
+  font-size: .75rem;
+  width: var(--table-copy-width);
+  min-width: var(--table-copy-width);
+  padding: 2px 8px;
+  cursor: pointer;
+  font-family: var(--mono);
+  line-height: 1.4;
+  transition: none;
+  text-align: center;
+}
+
+.copy-day-btn:hover,
+.copy-row-btn:hover {
+  border-color: var(--accent2);
+  color: var(--accent2);
+}
+
+.copy-day-btn.copied,
+.copy-row-btn.copied {
+  border-color: var(--infested);
+  color: var(--infested);
+}
+
+.copy-cell {
+  text-align: left;
+  padding: 8px 0 8px 2px;
+}
+
+.copy-cell-actions {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.day-copy-actions {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.copy-row-check,
+.copy-day-check {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--accent2);
+  cursor: pointer;
+}
+
+.arb-row.selected .arb-cell.box { background: var(--accent-soft-2); }
+
+.arb-row .copy-row-btn {
+  visibility: hidden;
+}
+
+.arb-row:hover .copy-row-btn {
+  visibility: visible;
+}
+
+body.debug-grid .arb-grid-row {
+  position: relative;
+}
+
+body.debug-grid .arb-cell.box {
+  box-shadow: inset 0 0 0 1px rgba(0, 212, 255, .22);
+}
+
+body.debug-grid .arb-cell.rail {
+  background: rgba(200, 168, 75, .14);
+}
+
+body.debug-grid .arb-grid-row::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: var(--table-actions-width);
+  top: 0;
+  bottom: 0;
+  outline: 1px dashed rgba(0, 212, 255, .18);
+  pointer-events: none;
+}

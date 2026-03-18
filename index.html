@@ -11,7 +11,7 @@
   <link rel="canonical" href="https://arbischedule.com/"/>
 
   <!-- Icons -->
-  <link rel="icon" href="/favicon-v2.ico" sizes="any">
+  <link rel="icon" href="/favicon.ico" sizes="any"/>
   <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png"/>
   <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
 
@@ -26,8 +26,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700&family=Orbitron:wght@400;500;700&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 
-  <!-- Styles -->
-  <link rel="stylesheet" href="/css/style.css?v=20260305-6"/>
 </head>
 <body>
 
@@ -61,11 +59,11 @@
           <small id="nodeCount">—</small>
         </div>
         <div class="search-box">
-          <input type="text" id="nodeSearch" placeholder="search nodes…" autocomplete="off"/>
+          <input type="text" id="nodeSearch" placeholder="search nodes: Alator Callisto" autocomplete="off"/>
           <div class="search-feedback" id="searchFeedback" aria-live="polite"></div>
         </div>
         <div class="node-list" id="nodeList">
-          <div class="state-box" style="border:none; padding:30px 10px">
+          <div class="state-box state-box-compact state-box-plain">
             <span class="spinner"></span> Loading…
           </div>
         </div>
@@ -102,7 +100,7 @@
           <div class="tz-listbox" id="tzListbox"></div>
         </div>
 
-        <div style="flex:1"></div>
+        <div class="results-spacer"></div>
 
         <span class="tz-label">Show next</span>
         <select id="daysSelect" class="days-select">
@@ -114,7 +112,11 @@
           <option value="180">180 days</option>
           <option value="365">365 days</option>
         </select>
-        <span id="resultCount" style="font-family:var(--mono);font-size:.78rem;color:var(--muted)">—</span>
+        <span id="resultCount" class="result-count">—</span>
+      </div>
+
+      <div id="copySelectedStash" hidden>
+        <button class="btn" id="btnCopySelected" disabled>Copy selected (0)</button>
       </div>
 
       <div id="tableWrap">
@@ -239,12 +241,8 @@
   </div>
 </div>
 
-<!-- html2canvas -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
-        crossorigin="anonymous"></script>
-
 <!-- App (ES modules) -->
-<script type="module" src="/js/app.js?v=20260305-8"></script>
+<script type="module" src="/src/main.ts"></script>
 
 </body>
 </html>

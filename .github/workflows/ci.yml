@@ -25,11 +25,17 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Lint CSS
+        run: npm run lint:css
+
       - name: Typecheck
         run: npm run typecheck
 
       - name: Unit tests
         run: npm test
+
+      - name: Build
+        run: npm run build
 
       - name: Production dependency audit
         run: npm audit --omit=dev --audit-level=high
