@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+  <!-- SEO -->
+  <title>Warframe Arbitration Schedule — Current &amp; Upcoming Rotations</title>
+  <meta name="description" content="Live Warframe Arbitration schedule. See current and upcoming arbitration missions, nodes, factions, and countdowns. Filter by node, mission type, or faction."/>
+  <meta name="keywords" content="warframe, arbitration, schedule, rotation, arbitrations, warframe arbitrations"/>
+  <link rel="canonical" href="https://arbischedule.com/"/>
+
+  <!-- Icons -->
+  <link rel="icon" href="/favicon.ico" sizes="any"/>
+  <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png"/>
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Warframe Arbitration Schedule"/>
+  <meta property="og:description" content="Live arbitration schedule with countdowns, node filtering, and timezone support."/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:url" content="https://arbischedule.com/"/>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700&family=Orbitron:wght@400;500;700&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+
+  <script type="module" crossorigin src="/assets/index-a7XaJTaS.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-CDJCJpOy.css">
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- Header -->
+  <header>
+    <div class="logo-block">
+      <h1>WARFRAME <span>ARBITRATIONS</span></h1>
+      <p>arbischedule.com</p>
+    </div>
+    <div class="status-bar">
+      <button class="btn" id="btnCustomizeUi">Customize UI</button>
+      <div class="status-row">
+        <div class="refresh-info" id="refreshInfo">
+          updated <span id="lastUpdated">—</span> · next in <span id="nextRefresh">—</span>
+        </div>
+        <div id="statusPill" class="status-pill">⟳ LOADING</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Layout -->
+  <div class="layout">
+
+    <!-- Sidebar: Node filter -->
+    <aside class="sidebar">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Nodes</h2>
+          <small id="nodeCount">—</small>
+        </div>
+        <div class="search-box">
+          <input type="text" id="nodeSearch" placeholder="search nodes: Alator Callisto" autocomplete="off"/>
+          <div class="search-feedback" id="searchFeedback" aria-live="polite"></div>
+        </div>
+        <div class="node-list" id="nodeList">
+          <div class="state-box state-box-compact state-box-plain">
+            <span class="spinner"></span> Loading…
+          </div>
+        </div>
+        <div class="sidebar-actions">
+          <button class="btn" id="btnAll">All</button>
+          <button class="btn" id="btnNone">None</button>
+        </div>
+        <div class="preset-controls">
+          <div class="preset-title">Selection presets</div>
+          <button class="btn" id="btnSavePreset">Save selection</button>
+          <select id="presetSelect" class="preset-select" aria-label="Saved selections">
+            <option value="">Select preset…</option>
+          </select>
+          <div class="preset-actions">
+            <button class="btn" id="btnLoadPreset">Load</button>
+            <button class="btn" id="btnDeletePreset">Delete preset</button>
+          </div>
+          <div class="preset-status" id="presetStatus" aria-live="polite"></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main-panel">
+      <div class="results-header">
+        <h2>Upcoming Arbitrations</h2>
+        <span class="tz-label" id="tzLabel"></span>
+
+        <div class="tz-combo" id="tzCombo">
+          <div class="tz-input-wrap">
+            <input type="text" id="tzInput" placeholder="override timezone" autocomplete="off"/>
+            <button class="tz-clear" id="tzClear" title="Reset to local">✕</button>
+          </div>
+          <div class="tz-listbox" id="tzListbox"></div>
+        </div>
+
+        <div class="results-spacer"></div>
+
+        <span class="tz-label">Show next</span>
+        <select id="daysSelect" class="days-select">
+          <option value="7">7 days</option>
+          <option value="14">14 days</option>
+          <option value="30" selected>30 days</option>
+          <option value="60">60 days</option>
+          <option value="90">90 days</option>
+          <option value="180">180 days</option>
+          <option value="365">365 days</option>
+        </select>
+        <span id="resultCount" class="result-count">—</span>
+      </div>
+
+      <div id="copySelectedStash" hidden>
+        <button class="btn" id="btnCopySelected" disabled>Copy selected (0)</button>
+      </div>
+
+      <div id="tableWrap">
+        <div class="state-box">
+          <span class="spinner"></span> Fetching data…
+        </div>
+      </div>
+    </main>
+
+  </div>
+</div>
+
+<div class="modal-backdrop" id="themeModal" aria-hidden="true" inert>
+  <div class="theme-modal" role="dialog" aria-modal="true" aria-labelledby="themeModalTitle">
+    <div class="theme-modal-header">
+      <h3 id="themeModalTitle">Customize UI</h3>
+      <button class="modal-close" id="themeCancelTop" aria-label="Close customize UI">x</button>
+    </div>
+
+    <div class="theme-modal-body">
+      <div class="theme-grid">
+        <section class="theme-section">
+          <h4>Presets</h4>
+          <div class="theme-inline">
+            <select id="themePresetSelect" class="theme-select" aria-label="Theme preset">
+              <option value="Default">Default</option>
+              <option value="Dark">Dark</option>
+              <option value="HighContrast">High Contrast</option>
+              <option value="Warm">Warm</option>
+              <option value="Custom">Custom</option>
+            </select>
+            <button class="btn" id="themePresetLoad">Use preset</button>
+          </div>
+        </section>
+
+        <section class="theme-section">
+          <h4>Colors</h4>
+          <label class="theme-field">
+            <span>Background</span>
+            <input type="color" id="themeBgInput" class="theme-color"/>
+          </label>
+          <label class="theme-field">
+            <span>Panel</span>
+            <input type="color" id="themeSurfaceInput" class="theme-color"/>
+          </label>
+          <label class="theme-field">
+            <span>Panel alt</span>
+            <input type="color" id="themeSurface2Input" class="theme-color"/>
+          </label>
+          <label class="theme-field">
+            <span>Border</span>
+            <input type="color" id="themeBorderInput" class="theme-color"/>
+          </label>
+          <label class="theme-field">
+            <span>Accent</span>
+            <input type="color" id="themeAccentInput" class="theme-color"/>
+          </label>
+          <label class="theme-field">
+            <span>Accent alt</span>
+            <input type="color" id="themeAccent2Input" class="theme-color"/>
+          </label>
+          <label class="theme-field">
+            <span>Text</span>
+            <input type="color" id="themeTextInput" class="theme-color"/>
+          </label>
+          <label class="theme-field">
+            <span>Strong text</span>
+            <input type="color" id="themeTextStrongInput" class="theme-color"/>
+          </label>
+          <label class="theme-field">
+            <span>Muted text</span>
+            <input type="color" id="themeMutedInput" class="theme-color"/>
+          </label>
+        </section>
+
+        <section class="theme-section">
+          <h4>Fonts</h4>
+          <label class="theme-field">
+            <span>Main font</span>
+            <select id="themeFontInput" class="theme-select">
+              <option value='"Rajdhani", sans-serif'>Rajdhani</option>
+              <option value='"Exo 2", sans-serif'>Exo 2</option>
+              <option value='"Orbitron", sans-serif'>Orbitron</option>
+            </select>
+          </label>
+          <label class="theme-field">
+            <span>Mono font</span>
+            <select id="themeMonoInput" class="theme-select">
+              <option value='"Share Tech Mono", monospace'>Share Tech Mono</option>
+              <option value='"Space Mono", monospace'>Space Mono</option>
+            </select>
+          </label>
+        </section>
+
+        <section class="theme-section">
+          <h4>Font Sizes</h4>
+          <label class="theme-range-field">
+            <span>Base text</span>
+            <input type="range" id="themeBaseSizeInput" min="14" max="22" step="1"/>
+            <output id="themeBaseSizeOut">16px</output>
+          </label>
+          <label class="theme-range-field">
+            <span>Node names</span>
+            <input type="range" id="themeNodeSizeInput" min="12" max="22" step="1"/>
+            <output id="themeNodeSizeOut">14px</output>
+          </label>
+          <label class="theme-range-field">
+            <span>Times</span>
+            <input type="range" id="themeTimeSizeInput" min="16" max="30" step="1"/>
+            <output id="themeTimeSizeOut">18px</output>
+          </label>
+        </section>
+      </div>
+    </div>
+
+    <div class="theme-modal-footer">
+      <button class="btn" id="themeReset">Reset to default</button>
+      <div class="theme-modal-spacer"></div>
+      <button class="btn" id="themeCancel">Cancel</button>
+      <button class="btn primary" id="themeApply">Apply</button>
+    </div>
+  </div>
+</div>
+
+<!-- App (ES modules) -->
+
+</body>
+</html>

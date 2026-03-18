@@ -12,6 +12,7 @@
     "types": ["vitest/globals"]
   },
   "include": [
+    "api/**/*.ts",
     "src/**/*.ts",
     "tests/**/*.ts",
     "types/**/*.d.ts",

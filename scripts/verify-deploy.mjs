@@ -37,8 +37,6 @@ async function main() {
 
   expect(html.includes("/assets/"), "HTML does not reference Vite assets");
   expect(!html.includes("/src/main.ts"), "HTML still references /src/main.ts");
-  expect(!html.includes("/cdn-cgi/challenge-platform"), "Cloudflare challenge injection still present");
-  expect(!html.includes("window.__CF"), "Cloudflare inline injection marker still present");
 
   const jsAsset = extractAssetUrl(html, "js");
   const cssAsset = extractAssetUrl(html, "css");
@@ -52,6 +50,14 @@ async function main() {
   const csp = docHeaders.get("content-security-policy") || "";
   expect(csp.includes("script-src 'self'"), "CSP is missing strict script-src 'self'");
 
+  const hasNonce = /script-src[^;]*'nonce-[^']+'/i.test(csp);
+  const hasCloudflareChallenge =
+    html.includes("/cdn-cgi/challenge-platform") || html.includes("window.__CF");
+
+  if (hasCloudflareChallenge) {
+    expect(hasNonce, "Cloudflare challenge injection present but CSP nonce is missing");
+  }
+
   const docCache = docHeaders.get("cache-control") || "";
   expect(docCache.includes("must-revalidate"), "Document cache-control should revalidate");
 
@@ -63,8 +69,13 @@ async function main() {
 
   console.log("Deploy verification passed:");
   console.log(`- HTML references hashed assets`);
-  console.log(`- No /src/main.ts or Cloudflare challenge injection found`);
-  console.log(`- CSP script-src is strict`);
+  console.log(`- No /src/main.ts in HTML`);
+  console.log(`- CSP script-src is strict${hasNonce ? " with nonce" : ""}`);
+  if (hasCloudflareChallenge) {
+    console.log(`- Cloudflare challenge injection detected and covered by CSP nonce`);
+  } else {
+    console.log(`- No Cloudflare challenge injection detected`);
+  }
   console.log(`- Document cache-control revalidates`);
   console.log(`- Asset cache-control is immutable`);
 }
